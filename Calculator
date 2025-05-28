@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scrape Cost Calculator</title>
+    <style>
+        .calculator-container {
+            max-width: 500px;
+            margin: 20px auto;
+            padding: 25px;
+            border: 2px solid #0052cc;
+            border-radius: 8px;
+            background-color: #f8f9fa;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+        
+        .calculator-title {
+            color: #0052cc;
+            text-align: center;
+            margin-bottom: 25px;
+            font-size: 24px;
+            font-weight: 600;
+        }
+        
+        .input-group {
+            margin-bottom: 20px;
+        }
+        
+        .input-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #333;
+        }
+        
+        .input-group input[type="number"],
+        .input-group select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+        
+        .input-group select {
+            background-color: white;
+        }
+        
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 25px;
+        }
+        
+        .checkbox-group input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+        }
+        
+        .results {
+            background: white;
+            padding: 20px;
+            border-radius: 6px;
+            border-left: 4px solid #0052cc;
+            margin-top: 25px;
+        }
+        
+        .cost-line {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            padding: 5px 0;
+        }
+        
+        .cost-line.total {
+            border-top: 2px solid #0052cc;
+            margin-top: 15px;
+            padding-top: 15px;
+            font-weight: 600;
+            font-size: 18px;
+            color: #0052cc;
+        }
+        
+        .cost-description {
+            color: #666;
+        }
+        
+        .cost-amount {
+            font-weight: 500;
+            font-family: 'Courier New', monospace;
+        }
+        
+        .total .cost-amount {
+            color: #0052cc;
+        }
+        
+        .note {
+            margin-top: 15px;
+            padding: 10px;
+            background-color: #e3f2fd;
+            border-radius: 4px;
+            font-size: 14px;
+            color: #1565c0;
+        }
+    </style>
+</head>
+<body>
+    <div class="calculator-container">
+        <h2 class="calculator-title">Document Scrape Cost Calculator</h2>
+        
+        <div class="input-group">
+            <label for="pages">Number of Pages:</label>
+            <input type="number" id="pages" min="0" value="0" step="1">
+        </div>
+        
+        <div class="input-group">
+            <label for="projectType">Project Type:</label>
+            <select id="projectType">
+                <option value="general">General Project</option>
+                <option value="boldventure">BOLD VENTURE</option>
+            </select>
+        </div>
+        
+        <div class="checkbox-group">
+            <input type="checkbox" id="needsAi" checked>
+            <label for="needsAi">AI Processing Required</label>
+        </div>
+        
+        <div class="checkbox-group">
+            <input type="checkbox" id="needsOcr">
+            <label for="needsOcr">OCR Processing Required</label>
+        </div>
+        
+        <div class="results">
+            <div class="cost-line">
+                <span class="cost-description">Webscrape:</span>
+                <span class="cost-amount" id="webscrapeAmount">$0.00</span>
+            </div>
+            
+            <div class="cost-line">
+                <span class="cost-description">AI Processing:</span>
+                <span class="cost-amount" id="aiAmount">$0.00</span>
+            </div>
+            
+            <div class="cost-line">
+                <span class="cost-description">OCR Processing:</span>
+                <span class="cost-amount" id="ocrAmount">$0.00</span>
+            </div>
+            
+            <div class="cost-line">
+                <span class="cost-description">AWS Storage:</span>
+                <span class="cost-amount" id="storageAmount">$0.00</span>
+            </div>
+            
+            <div class="cost-line total">
+                <span>Total Estimated Cost:</span>
+                <span class="cost-amount" id="totalAmount">$0.00</span>
+            </div>
+            
+            <div class="note" id="approvalNote">
+                Enter page count to see approval requirements
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const COSTS = {
+            webscrapePerPage: 0.0000948,
+            aiPerPage: 0.0586052,
+            ocrPerPage: 0.0227,
+            storagePerPage: 0.00000065136
+        };
+        
+        const THRESHOLDS = {
+            general: 1000,
+            boldVenture: 2500
+        };
+        
+        function formatCurrency(amount) {
+            return "$" + amount.toLocaleString("en-US", {
+                minimumFractionDigits: 4,
+                maximumFractionDigits: 4
+            });
+        }
+        
+        function formatNumberInput(input) {
+            let value = input.value.replace(/,/g, "");
+            if (value && !isNaN(value)) {
+                input.value = parseInt(value).toLocaleString();
+            }
+        }
+        
+        function getNumericValue(input) {
+            return parseInt(input.value.replace(/,/g, "")) || 0;
+        }
+        
+        function calculateCosts() {
+            const pages = getNumericValue(document.getElementById("pages"));
+            const projectType = document.getElementById("projectType").value;
+            const needsAi = document.getElementById("needsAi").checked;
+            const needsOcr = document.getElementById("needsOcr").checked;
+            
+            const webscrapeCost = pages * COSTS.webscrapePerPage;
+            const aiCost = needsAi ? pages * COSTS.aiPerPage : 0;
+            const ocrCost = needsOcr ? pages * COSTS.ocrPerPage : 0;
+            const storageCost = pages * COSTS.storagePerPage;
+            const totalCost = webscrapeCost + aiCost + ocrCost + storageCost;
+            
+            document.getElementById("webscrapeAmount").textContent = formatCurrency(webscrapeCost);
+            document.getElementById("aiAmount").textContent = formatCurrency(aiCost);
+            document.getElementById("ocrAmount").textContent = formatCurrency(ocrCost);
+            document.getElementById("storageAmount").textContent = formatCurrency(storageCost);
+            document.getElementById("totalAmount").textContent = formatCurrency(totalCost);
+            
+            const noteElement = document.getElementById("approvalNote");
+            const threshold = projectType === "boldventure" ? THRESHOLDS.boldVenture : THRESHOLDS.general;
+            const projectTypeDisplay = projectType === "boldventure" ? "BOLD VENTURE" : "General";
+            
+            if (pages === 0) {
+                noteElement.textContent = "Enter page count to see approval requirements";
+                noteElement.style.backgroundColor = "#e3f2fd";
+            } else if (totalCost < threshold) {
+                noteElement.textContent = "✓ Auto-approved for " + projectTypeDisplay + " projects (under $" + threshold.toLocaleString() + ")";
+                noteElement.style.backgroundColor = "#e8f5e8";
+            } else {
+                noteElement.textContent = "⚠ Requires additional sign-off for " + projectTypeDisplay + " projects (over $" + threshold.toLocaleString() + ")";
+                noteElement.style.backgroundColor = "#f8d7da";
+            }
+        }
+        
+        document.getElementById("pages").addEventListener("input", calculateCosts);
+        document.getElementById("projectType").addEventListener("change", calculateCosts);
+        document.getElementById("needsAi").addEventListener("change", calculateCosts);
+        document.getElementById("needsOcr").addEventListener("change", calculateCosts);
+        
+        calculateCosts();
+    </script>
+</body>
+</html>
